@@ -1,6 +1,7 @@
 'use strict';
 
 module.exports = function (module) {
+	console.log('ayooo');
 	const utils = require('../../utils');
 	const helpers = require('./helpers');
 	const dbHelpers = require('../helpers');
@@ -309,8 +310,26 @@ module.exports = function (module) {
 		}
 		return await module.client[method](args);
 	}
+	function processScanDataElement(data, i, seen, returnData, params) {
+		console.log('owen');
+		const value = data[i];
 
-	module.getSortedSetScan = async function (params) {
+		if (!seen[value]) {
+			seen[value] = 1;
+
+			if (params.withScores) {
+				returnData.push({ value: value, score: parseFloat(data[i + 1]) });
+			} else {
+				returnData.push(value);
+			}
+
+			if (params.limit && returnData.length >= params.limit) {
+				return true;
+			}
+		}
+		console.log('gometz');
+		return false;
+	} module.getSortedSetScan = async function (params) {
 		let cursor = '0';
 
 		const returnData = [];
@@ -324,19 +343,9 @@ module.exports = function (module) {
 			const data = res[1];
 
 			for (let i = 0; i < data.length; i += 2) {
-				const value = data[i];
-				if (!seen[value]) {
-					seen[value] = 1;
-
-					if (params.withScores) {
-						returnData.push({ value: value, score: parseFloat(data[i + 1]) });
-					} else {
-						returnData.push(value);
-					}
-					if (params.limit && returnData.length >= params.limit) {
-						done = true;
-						break;
-					}
+				if (processScanDataElement(data, i, seen, returnData, params)) {
+					done = true;
+					break;
 				}
 			}
 		} while (!done);
